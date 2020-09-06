@@ -3,14 +3,9 @@ variable "domain_config_file" {
     default = "../domain.yml"
 }
 
-variable "servers_subnet_cidr" {
-    description = "CIDR to use for the Servers subnet"
-    default = "10.0.10.0/24"
-}
-
-variable "workstations_subnet_cidr" {
-    description = "CIDR to use for the Workstations subnet"
-    default = "10.0.11.0/24"
+variable "vms_subnet_cidr" {
+    description = "CIDR to use for the VMs subnet"
+    default = "10.0.2.0/24"
 }
 
 variable "elasticsearch_admin_user" {
