@@ -1,22 +1,16 @@
 resource "azurerm_network_interface" "main" {
-  name                = "${var.prefix}-nic"
+  name                = "${var.prefix}-dc-nic"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
+  enable_ip_forwarding = true
 
   ip_configuration {
     name                          = "static"
-    subnet_id                     = azurerm_subnet.servers.id
+    subnet_id                     = azurerm_subnet.vms.id
     private_ip_address_allocation = "Static"
-    private_ip_address = cidrhost(var.servers_subnet_cidr, 10)
-    public_ip_address_id = azurerm_public_ip.main.id
+    private_ip_address = cidrhost(var.vms_subnet_cidr, 20)
   }
 }
-
-resource "azurerm_network_interface_security_group_association" "dc" {
-  network_interface_id      = azurerm_network_interface.main.id
-  network_security_group_id = azurerm_network_security_group.windows.id
-}
-
 
 resource "azurerm_virtual_machine" "dc" {
   name                  = "domain-controller"
@@ -34,45 +28,50 @@ resource "azurerm_virtual_machine" "dc" {
   storage_image_reference {
     publisher = "MicrosoftWindowsServer"
     offer     = "WindowsServer"
-    sku       = "2019-Datacenter"
+    sku       = "2016-Datacenter"
     version   = "latest"
   }
+
   storage_os_disk {
     name              = "os-disk"
     caching           = "ReadWrite"
     create_option     = "FromImage"
     managed_disk_type = "Standard_LRS"
   }
+
   os_profile {
-    computer_name  = local.domain.dc_name
+    computer_name  = "DOMAIN-NAME-DC"
     admin_username = local.domain.initial_domain_admin.username
     admin_password = local.domain.initial_domain_admin.password
   }
+
   os_profile_windows_config {
       enable_automatic_upgrades = false
-      timezone = "Central European Standard Time"
+      provision_vm_agent = true
+      timezone = "Eastern Standard Time"
       winrm {
-        protocol = "HTTP"
+        protocol = "HTTP" # TODO change to HTTPS
       }
   }
+}
+# While this is part of the DevTest Labs service in Azure, 
+# this resource applies only to standard VMs, not DevTest Lab VMs.
+# Resources will be deallocated
+resource "azurerm_dev_test_global_vm_shutdown_schedule" "domain-controlleer" {
+  virtual_machine_id = azurerm_virtual_machine.dc.id
+  location           = azurerm_resource_group.main.location
+  enabled            = true
 
-  # Provision base domain and DC
-  provisioner "local-exec" {
-    working_dir = "${path.root}/../ansible"
-    command = "/bin/bash -c 'source venv/bin/activate && ansible-playbook domain-controllers.yml --tags=common,base -v'"
+  daily_recurrence_time = "2300" ## HHmm format where HH (0-23) and mm (0-59)
+  timezone              = "Eastern Standard Time"
+
+  notification_settings {
+    enabled         = false
+    time_in_minutes = "60"
+    webhook_url     = ""
   }
-
+  
   tags = {
     kind = "domain-controller"
   }
-}
-
-# Provision rest of DC outside of the VM resource block to allow provisioning workstations concurrently
-resource "null_resource" "provision_rest_of_dc_after_creation" {
-  provisioner "local-exec" {
-    working_dir = "${path.root}/../ansible"
-    command = "/bin/bash -c 'source venv/bin/activate && ansible-playbook domain-controllers.yml --skip-tags=base -v'"
-  }
-
-  depends_on = [azurerm_virtual_machine.dc]
 }

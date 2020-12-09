@@ -4,22 +4,16 @@ resource "azurerm_network_interface" "workstation" {
   name                = "${var.prefix}-wks-${count.index}-nic"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
+  enable_ip_forwarding = true
 
   ip_configuration {
     name                          = "static"
-    subnet_id                     = azurerm_subnet.workstations.id
+    subnet_id                     = azurerm_subnet.vms.id
     private_ip_address_allocation = "Static"
-    private_ip_address = cidrhost(var.workstations_subnet_cidr, 10+count.index)
-    public_ip_address_id = azurerm_public_ip.workstation[count.index].id
+    private_ip_address = cidrhost(var.vms_subnet_cidr, count.index+10)
   }
 }
 
-resource "azurerm_network_interface_security_group_association" "workstation" {
-  count = length(local.domain.workstations)
-
-  network_interface_id      = azurerm_network_interface.workstation[count.index].id
-  network_security_group_id = azurerm_network_security_group.windows.id
-}
 resource "azurerm_virtual_machine" "workstation" {
   count = length(local.domain.workstations)
   
@@ -45,20 +39,24 @@ resource "azurerm_virtual_machine" "workstation" {
     sku       = "19h1-pron"
     version   = "latest"
   }
+
   storage_os_disk {
     name              = "wks-${count.index}-os-disk"
     caching           = "ReadWrite"
     create_option     = "FromImage"
     managed_disk_type = "Standard_LRS"
   }
+
   os_profile {
     computer_name  = local.domain.workstations[count.index].name
     admin_username = local.domain.default_local_admin.username
     admin_password = local.domain.default_local_admin.password
   }
+
   os_profile_windows_config {
       enable_automatic_upgrades = false
-      timezone = "Central European Standard Time"
+      provision_vm_agent = true
+      timezone = "Eastern Standard Time"
       winrm {
         protocol = "HTTP"
       }
@@ -69,18 +67,22 @@ resource "azurerm_virtual_machine" "workstation" {
   }
 }
 
+# While this is part of the DevTest Labs service in Azure, 
+# this resource applies only to standard VMs, not DevTest Lab VMs.
+# Resources will be deallocated
+resource "azurerm_dev_test_global_vm_shutdown_schedule" "workstation" {
+  count = length(local.domain.workstations)
 
-resource "null_resource" "provision_workstation_once_dc_has_been_created" {
-  provisioner "local-exec" {
-    working_dir = "${path.root}/../ansible"
-    command = "/bin/bash -c 'source venv/bin/activate && ansible-playbook workstations.yml -v'"
+  virtual_machine_id = azurerm_virtual_machine.workstation[count.index].id
+  location           = azurerm_resource_group.main.location
+  enabled            = true
+
+  daily_recurrence_time = "2300" ## HHmm format where HH (0-23) and mm (0-59)
+  timezone              = "Eastern Standard Time"
+
+  notification_settings {
+    enabled         = false
+    time_in_minutes = "60"
+    webhook_url     = ""
   }
-
-  # Note: the dependance on 'azurerm_virtual_machine.workstation' applies to *all* resources created from this block
-  # The provisioner will only be run once all workstations have been created (not once per workstation)
-  # c.f. https://github.com/hashicorp/terraform/issues/15285
-  depends_on = [
-    azurerm_virtual_machine.dc, 
-    azurerm_virtual_machine.workstation 
-  ]
 }

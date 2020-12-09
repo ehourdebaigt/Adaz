@@ -1,5 +1,6 @@
 terraform/*.tfstate
 terraform/*.tfstate.backup
 terraform/.terraform
+terraform/cert.crt
 ansible/venv
 ansible/*.retry

@@ -1,0 +1,32 @@
+# FQDN of your domain
+dns_name: domainname.lab
+
+# Hostname of the domain controller
+dc_name: DOMAIN-NAME-DC
+
+# Credentials of the initial domain admin
+initial_domain_admin:
+  username: domain-admin
+  password: domain-admin
+
+organizational_units: {}
+
+# Domain users - by default, password := username
+users:
+- username: username
+  password: password
+
+# Credentials of the local admin created on all workstations
+default_local_admin:
+  username: admin
+  password: TODO
+
+# Workstations to configure and to domain-join
+workstations:
+- name: WKS01
+  local_admins: [admin]
+- name: WKS02
+  local_admins: [admin]
+
+# Should the Windows firewall be enabled?
+enable_windows_firewall: no

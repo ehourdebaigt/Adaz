@@ -1,107 +1,34 @@
 resource "azurerm_virtual_network" "main" {
-  name                = "${var.prefix}-network"
+  name                = "virtual-network"
   address_space       = ["10.0.0.0/16"]
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
 }
-
-resource "azurerm_subnet" "servers" {
-  name                 = "servers"
+resource "azurerm_subnet" "vms" { 
+  name                 = "vms"
   resource_group_name  = azurerm_resource_group.main.name
   virtual_network_name = azurerm_virtual_network.main.name
-  address_prefixes     = [var.servers_subnet_cidr]
+  address_prefixes     = ["10.0.1.0/24"]
 }
-
-resource "azurerm_subnet" "workstations" {
-  name                 = "workstations"
-  resource_group_name  = azurerm_resource_group.main.name
-  virtual_network_name = azurerm_virtual_network.main.name
-  address_prefixes     = [var.workstations_subnet_cidr]
-}
-
-
-# Network security groups for interfaces
-
-resource "azurerm_network_security_group" "windows" {
-  name                = "windows-nsg"
+resource "azurerm_network_security_group" "example" {
+  name                = "example-nsg"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
 
   security_rule {
-    name                       = "Allow-RDP"
+    name                       = "allow_all_inbound_traffic"
     priority                   = 100
     direction                  = "Inbound"
     access                     = "Allow"
     protocol                   = "Tcp"
     source_port_range          = "*"
-    destination_port_range     = "3389"
-    source_address_prefix      = "${local.public_ip}/32"
-    destination_address_prefix = "*"
-  }
-  
-  security_rule {
-    name                       = "Allow-WinRM"
-    priority                   = 101
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "5985"
-    source_address_prefix      = "${local.public_ip}/32"
+    destination_port_range     = "*"
+    source_address_prefix      = "*"
     destination_address_prefix = "*"
   }
 
-  security_rule {
-    name                       = "Allow-WinRM-secure"
-    priority                   = 102
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "5986"
-    source_address_prefix      = "${local.public_ip}/32"
-    destination_address_prefix = "*"
-  }
-
-  security_rule {
-    # Note: it will still be blocked by the Windows Firewall if enabled
-    name                       = "Allow-SMB"
-    priority                   = 103
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "445"
-    source_address_prefix      = "${local.public_ip}/32"
-    destination_address_prefix = "*"
-  }
 }
-
-resource "azurerm_network_security_group" "elasticsearch_kibana" {
-  name                = "elasticsearch-kibana-nsg"
-  location            = azurerm_resource_group.main.location
-  resource_group_name = azurerm_resource_group.main.name
-
-  security_rule {
-    name                       = "Allow-SSH"
-    priority                   = 100
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "22"
-    source_address_prefix      = "${local.public_ip}/32"
-    destination_address_prefix = "*"
-  }
-  security_rule {
-    name                       = "Allow-Kibana"
-    priority                   = 101
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "5601"
-    source_address_prefix      = "${local.public_ip}/32"
-    destination_address_prefix = "*"
-  }
+resource "azurerm_subnet_network_security_group_association" "example" {
+  subnet_id                 = azurerm_subnet.vms.id
+  network_security_group_id = azurerm_network_security_group.example.id
 }

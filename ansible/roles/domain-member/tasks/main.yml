@@ -77,4 +77,4 @@
     path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\OOBE
     name: DisablePrivacyExperience
     data: "1"
-    type: dword
+    type: dword    
