@@ -16,19 +16,19 @@ This project allows you to easily spin up a Active Directory lab with Terraform 
 
 - Clone this repository
 
-```
+```bash
 git clone https://github.com/ehourdebaigt/Adaz.git
 ```
 
 - Install Ansible in a virtual environment
 
-```
+```bash
 cd ansible/
 python3 -m venv ansible/venv 
 source ansible/venv/bin/activate
 pip install -r ansible/requirements.txt
 ansible-galaxy collection install ansible.windows
-``` 
+```
 
 ### Usage
 
@@ -47,7 +47,7 @@ openvpn --config openvpn.log &
 ansible-playbook domain-controllers.yml -v
 ansible-playbook workstations.yml -v
 deactivate
-``` 
+```
 
 ### Costs
 
