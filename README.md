@@ -51,7 +51,7 @@ deactivate
 
 ### Costs
 
-Azure VPN Gateways are very costly. They cost roughly twice as much as the VMs (about 140USD per month). Contrarily to VMs you cannot deallocate a VPN gateway resource to save money. 
+Be aware that Azure VPN Gateways are very costly. They cost roughly twice as much as the VMs (about 140USD per month). Contrary to VMs, you cannot deallocate a VPN gateway to save money. 
 
 ### Destroy
 Simply run `terraform destroy` when you are done with the lab. 
